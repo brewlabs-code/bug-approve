@@ -2,16 +2,27 @@ import { useCallback, useEffect } from "react";
 import { erc20Abi, parseUnits } from "viem";
 import {
   useAccount,
+  useReadContract,
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
 
-export const useApproveSpend = () => {
-  // Hardcoded values for testing
-  const decimals = 6;
-  const totalAmount = 1000;
+export const useApproveSpend = ({
+  totalAmount,
+  spenderAddress,
+  tokenAddress,
+}: {
+  totalAmount: number;
+  spenderAddress: `0x${string}`;
+  tokenAddress: `0x${string}`;
+}) => {
+  const { chain, chainId, address } = useAccount();
 
-  const { chain, address } = useAccount();
+  const { data: decimals } = useReadContract({
+    address: tokenAddress,
+    abi: erc20Abi,
+    functionName: "decimals",
+  });
 
   const {
     data: hash,
@@ -34,8 +45,8 @@ export const useApproveSpend = () => {
 
     const tokenContract = {
       abi: erc20Abi,
-      chainId: 1,
-      address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      chainId: chainId,
+      address: tokenAddress,
     } as const;
 
     const amountInWei = parseUnits(totalAmount.toString(), decimals);
@@ -43,14 +54,23 @@ export const useApproveSpend = () => {
     writeContract({
       ...tokenContract,
       functionName: "approve",
-      args: [
-        "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984" as `0x${string}`,
-        amountInWei,
-      ],
+      args: [spenderAddress, amountInWei],
       chain,
       account: address,
     });
-  }, [address, chain, isApproved, isApproving, isPending, writeContract]);
+  }, [
+    address,
+    chain,
+    chainId,
+    decimals,
+    isApproved,
+    isApproving,
+    isPending,
+    spenderAddress,
+    tokenAddress,
+    totalAmount,
+    writeContract,
+  ]);
 
   useEffect(() => {
     if (isPending) {
